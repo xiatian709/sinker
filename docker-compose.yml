@@ -1,0 +1,56 @@
+---
+version: '3'
+
+services:
+  zookeeper:
+    image: zookeeper:3.7.0
+    restart: always
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: 1
+    security_opt:
+      - label:disable
+  kafka:
+    image: confluentinc/cp-kafka:5.5.0
+    container_name: kafka
+    restart: always
+    hostname: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: "LISTENER_DOCKER_INTERNAL://127.0.0.1:9092,LISTENER_DOCKER_EXTERNAL://127.0.0.1:9093"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_DOCKER_INTERNAL:PLAINTEXT,LISTENER_DOCKER_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_DOCKER_INTERNAL
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_BROKER_ID: 1
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    security_opt:
+      - label:disable
+  clickhouse:
+    image: clickhouse/clickhouse-server:22.8
+    restart: always
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - "./docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d"
+    security_opt:
+      - label:disable
+  nacos:
+    image: nacos/nacos-server:1.4.1
+    container_name: nacos-standalone
+    environment:
+    - PREFER_HOST_MODE=hostname
+    - MODE=standalone
+    ports:
+    - "8848:8848"
